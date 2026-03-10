@@ -2,24 +2,16 @@
 - name: Collect System Information
   hosts: all
   gather_facts: true
-
   tasks:
     - name: Show OS version
       ansible.builtin.debug:
         msg: "OS: {{ ansible_distribution }} {{ ansible_distribution_version }}"
-
     - name: Show hostname
       ansible.builtin.debug:
         msg: "Hostname: {{ ansible_hostname }}"
-
     - name: Show total RAM
       ansible.builtin.debug:
         msg: "Total RAM: {{ ansible_memtotal_mb }} MB"
-
     - name: Show CPU count
       ansible.builtin.debug:
         msg: "CPUs: {{ ansible_processor_vcpus }}"
-
-    - name: Show IP address
-      ansible.builtin.debug:
-        msg: "IP: {{ ansible_all_ipv4_addresses | first | default('N/A') }}"
