@@ -8,9 +8,9 @@
   tasks:
     - name: Create and provision VM
       theforeman.foreman.host:
-        server_url: "{{ foreman_server_url }}"
-        username: "{{ foreman_username }}"
-        password: "{{ foreman_password }}"
+        server_url: "{{ satellite_url }}"
+        username: "{{ satellite_user }}"
+        password: "{{ satellite_password }}"
         validate_certs: false
         name: "{{ vm_name }}"
         organization: "{{ organization }}"
@@ -18,12 +18,12 @@
         hostgroup: "{{ hostgroup }}"
         compute_resource: "{{ compute_resource }}"
         root_pass: "{{ root_pass }}"
+        openscap_proxy: "{{ openscap_capsule }}"
         build: true
         state: present
         interfaces_attributes:
           - primary: true
             provision: true
             ip: "{{ vm_ip }}"
-            mac: ""
             subnet: "{{ subnet }}"
             domain: "{{ domain }}"
