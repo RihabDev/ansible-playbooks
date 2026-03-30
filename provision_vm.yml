@@ -1,0 +1,21 @@
+---
+- name: Provision VM via Satellite
+  hosts: localhost
+  gather_facts: false
+  collections:
+    - theforeman.foreman
+
+  tasks:
+    - name: Create and provision VM
+      theforeman.foreman.host:
+        server_url: "{{ satellite_url }}"
+        username: "{{ satellite_user }}"
+        password: "{{ satellite_password }}"
+        validate_certs: false
+        name: "{{ vm_name }}"
+        organization: "{{ organization }}"
+        location: "{{ location }}"
+        hostgroup: "{{ hostgroup }}"
+        compute_resource: "{{ compute_resource }}"
+        build: true
+        state: present
