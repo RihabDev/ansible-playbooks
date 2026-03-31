@@ -19,6 +19,8 @@
         compute_resource: "{{ compute_resource }}"
         root_pass: "{{ root_pass }}"
         openscap_proxy: "{{ openscap_capsule }}"
+        ptable: "Kickstart default"   
+        pxe_loader: "PXELinux BIOS"
         build: true
         state: present
         interfaces_attributes:
