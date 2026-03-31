@@ -62,6 +62,7 @@
 
         hostgroup: "{{ vm_defaults.hostgroup }}"
         operatingsystem: "{{ vm_defaults.operatingsystem }}"
+        root_pass: "12345678"
         architecture: "{{ vm_defaults.architecture }}"
         ptable: "{{ vm_defaults.ptable }}"
         medium: "{{ vm_defaults.medium }}"
