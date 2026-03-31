@@ -2,7 +2,8 @@
 - name: Provision KVM VM via Red Hat Satellite (Foreman)
   hosts: localhost
   gather_facts: false
-
+  collections:
+    - theforeman.foreman
   vars:
     satellite_url: "https://satellite.local"
     satellite_username: "admin"
@@ -66,7 +67,6 @@
         medium: "{{ vm_defaults.medium }}"
         pxe_loader: "{{ vm_defaults.pxe_loader }}"
 
-        # Network
         domain: "{{ item.domain }}"
         subnet: "{{ item.subnet }}"
         ip: "{{ item.ip }}"
