@@ -17,6 +17,7 @@
         location: "{{ location }}"
         hostgroup: "{{ hostgroup }}"
         compute_resource: "{{ compute_resource }}"
+        compute_profile: "satellite-vm"
         root_pass: "{{ root_pass }}"
         openscap_proxy: "{{ openscap_capsule }}"
         ptable: "Kickstart default"   
