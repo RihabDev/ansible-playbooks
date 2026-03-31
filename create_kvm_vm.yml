@@ -2,13 +2,12 @@
 - name: Provision KVM VM via Red Hat Satellite (Foreman)
   hosts: localhost
   gather_facts: false
-  collections:
-    - theforeman.foreman
+
   vars:
     satellite_url: "https://satellite.local"
     satellite_username: "admin"
     satellite_password: "123456"
-    validate_certs: true
+    validate_certs: false
 
     vm_defaults:
       organization: "Linsoft"
