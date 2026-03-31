@@ -14,13 +14,7 @@
       organization: "Linsoft"
       location: "Tunis"
       hostgroup: "RHEL9-Group"
-      compute_resource: "KVM-local"
-      compute_profile: "custom"
-      operatingsystem: "RHEL 9.7"
-      architecture: "x86_64"
-      ptable: "Kickstart default"         
-      medium: "RHEL9-BaseOS"        
-      pxe_loader: "PXELinux BIOS"
+      
       build: true
 
     compute_attributes:
@@ -63,10 +57,7 @@
         hostgroup: "{{ vm_defaults.hostgroup }}"
         operatingsystem: "{{ vm_defaults.operatingsystem }}"
         root_pass: "12345678"
-        architecture: "{{ vm_defaults.architecture }}"
-        ptable: "{{ vm_defaults.ptable }}"
-        medium: "{{ vm_defaults.medium }}"
-        pxe_loader: "{{ vm_defaults.pxe_loader }}"
+        openscap_proxy: "satellite.local"
 
         domain: "{{ item.domain }}"
         subnet: "{{ item.subnet }}"
@@ -112,7 +103,7 @@
 
     - name: Report provisioned VMs
       debug:
-        msg: "✅ VM {{ item.name }} provisioned successfully at {{ item.ip }}"
+        msg: "VM {{ item.name }} provisioned successfully at {{ item.ip }}"
       loop: "{{ vms_to_create }}"
       loop_control:
         label: "{{ item.name }}"
