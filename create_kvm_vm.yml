@@ -19,7 +19,7 @@
       operatingsystem: "RHEL 9.7"
       architecture: "x86_64"
       ptable: "Kickstart default"         
-      medium: "RHEL 9.7 Kickstart"        
+      medium: "RHEL9-BaseOS"        
       pxe_loader: "PXELinux BIOS"
       build: true
 
