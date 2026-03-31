@@ -27,15 +27,15 @@
       machine_type: "kvm"
 
     vms_to_create:
-      - name: "vm1.local"
+      - name: "client1.local"
         mac: ""                           
-        ip: "192.168.122.110"
+        ip: "192.168.122.130"
         domain: "local"
         subnet: "satellite-network"        
 
-      - name: "vm2.local"
+      - name: "client2.local"
         mac: ""
-        ip: "192.168.122.120"
+        ip: "192.168.122.140"
         domain: "local"
         subnet: "satellite-network"
 
