@@ -1,0 +1,117 @@
+---
+- name: Provision KVM VM via Red Hat Satellite (Foreman)
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    satellite_url: "https://satellite.local"
+    satellite_username: "admin"
+    satellite_password: "123456"
+    validate_certs: true
+
+    vm_defaults:
+      organization: "Linsoft"
+      location: "Tunis"
+      hostgroup: "RHEL9-Group"
+      compute_resource: "KVM-local"
+      compute_profile: "custom"
+      operatingsystem: "RHEL 9.7"
+      architecture: "x86_64"
+      ptable: "Kickstart default"         
+      medium: "RHEL 9.7 Kickstart"        
+      pxe_loader: "PXELinux BIOS"
+      build: true
+
+    compute_attributes:
+      cpus: 2
+      memory: 4194304                     
+      storage_pool: "default"
+      disk_capacity: "20G"
+      disk_allocation: "2G"
+      disk_path_prefix: "/var/lib/libvirt/images"
+      network_type: "virtio"
+      network_source: "virbr0"
+      machine_type: "kvm"
+
+    vms_to_create:
+      - name: "vm1.local"
+        mac: ""                           
+        ip: "192.168.122.110"
+        domain: "local"
+        subnet: "192.168.122.0/24"        
+
+      - name: "vm2.local"
+        mac: ""
+        ip: "192.168.122.120"
+        domain: "local"
+        subnet: "192.168.122.0/24"
+
+  tasks:
+
+    - name: Create VMs on Satellite/Foreman
+      redhat.satellite.host:
+        server_url: "{{ satellite_url }}"
+        username: "{{ satellite_username }}"
+        password: "{{ satellite_password }}"
+        validate_certs: "{{ validate_certs }}"
+
+        name: "{{ item.name }}"
+        organization: "{{ vm_defaults.organization }}"
+        location: "{{ vm_defaults.location }}"
+
+        hostgroup: "{{ vm_defaults.hostgroup }}"
+        operatingsystem: "{{ vm_defaults.operatingsystem }}"
+        architecture: "{{ vm_defaults.architecture }}"
+        ptable: "{{ vm_defaults.ptable }}"
+        medium: "{{ vm_defaults.medium }}"
+        pxe_loader: "{{ vm_defaults.pxe_loader }}"
+
+        # Network
+        domain: "{{ item.domain }}"
+        subnet: "{{ item.subnet }}"
+        ip: "{{ item.ip }}"
+        mac: "{{ item.mac | default(omit) }}"
+
+        compute_resource: "{{ vm_defaults.compute_resource }}"
+        compute_attributes:
+          cpus: "{{ compute_attributes.cpus }}"
+          memory: "{{ compute_attributes.memory }}"
+          nics_attributes:
+            "0":
+              type: "{{ compute_attributes.network_type }}"
+              network: "{{ compute_attributes.network_source }}"
+          volumes_attributes:
+            "0":
+              pool_name: "{{ compute_attributes.storage_pool }}"
+              capacity: "{{ compute_attributes.disk_capacity }}"
+              allocation: "{{ compute_attributes.disk_allocation }}"
+              format_type: "qcow2"
+
+        build: "{{ vm_defaults.build }}"
+        state: present
+
+      loop: "{{ vms_to_create }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Wait for VMs to finish build
+      redhat.satellite.host_info:
+        server_url: "{{ satellite_url }}"
+        username: "{{ satellite_username }}"
+        password: "{{ satellite_password }}"
+        validate_certs: "{{ validate_certs }}"
+        name: "{{ item.name }}"
+      register: host_info
+      until: not (host_info.host.build | bool)
+      retries: 40
+      delay: 30
+      loop: "{{ vms_to_create }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Report provisioned VMs
+      debug:
+        msg: "✅ VM {{ item.name }} provisioned successfully at {{ item.ip }}"
+      loop: "{{ vms_to_create }}"
+      loop_control:
+        label: "{{ item.name }}"
