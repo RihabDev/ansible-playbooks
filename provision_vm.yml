@@ -18,6 +18,7 @@
         hostgroup: "{{ hostgroup }}"
         compute_resource: "{{ compute_resource }}"
         root_pass: "{{ root_pass }}"
+        operatingsystem: "RHEL 9.7"
         openscap_proxy: "{{ openscap_capsule }}"
         build: true
         state: present
