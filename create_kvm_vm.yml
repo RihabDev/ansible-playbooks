@@ -14,7 +14,6 @@
       organization: "Linsoft"
       location: "Tunis"
       hostgroup: "RHEL9-Group"
-      
       build: true
 
     compute_attributes:
@@ -63,14 +62,10 @@
         subnet: "{{ item.subnet }}"
         ip: "{{ item.ip }}"
         mac: "{{ item.mac | default(omit) }}"
-
-        compute_resource: "{{ vm_defaults.compute_resource }}"
         compute_attributes:
           cpus: "{{ compute_attributes.cpus }}"
           memory: "{{ compute_attributes.memory }}"
          
-         
-
         build: "{{ vm_defaults.build }}"
         state: present
 
