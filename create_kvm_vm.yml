@@ -55,10 +55,10 @@
         location: "{{ vm_defaults.location }}"
 
         hostgroup: "{{ vm_defaults.hostgroup }}"
-        operatingsystem: "{{ vm_defaults.operatingsystem }}"
+        operatingsystem: "RHEL 9.7"
         root_pass: "12345678"
         openscap_proxy: "satellite.local"
-
+        
         domain: "{{ item.domain }}"
         subnet: "{{ item.subnet }}"
         ip: "{{ item.ip }}"
@@ -68,16 +68,8 @@
         compute_attributes:
           cpus: "{{ compute_attributes.cpus }}"
           memory: "{{ compute_attributes.memory }}"
-          nics_attributes:
-            "0":
-              type: "{{ compute_attributes.network_type }}"
-              network: "{{ compute_attributes.network_source }}"
-          volumes_attributes:
-            "0":
-              pool_name: "{{ compute_attributes.storage_pool }}"
-              capacity: "{{ compute_attributes.disk_capacity }}"
-              allocation: "{{ compute_attributes.disk_allocation }}"
-              format_type: "qcow2"
+         
+         
 
         build: "{{ vm_defaults.build }}"
         state: present
