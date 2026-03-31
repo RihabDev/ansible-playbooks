@@ -27,3 +27,10 @@
             ip: "{{ vm_ip }}"
             subnet: "{{ subnet }}"
             domain: "{{ domain }}"
+        compute_attributes:
+            cpus: 2
+            memory: 4194304                     
+            disk_capacity: "20G"
+            disk_allocation: "2G"
+            
+     
