@@ -39,13 +39,13 @@
         mac: ""                           
         ip: "192.168.122.110"
         domain: "local"
-        subnet: "192.168.122.0/24"        
+        subnet: "satellite-network"        
 
       - name: "vm2.local"
         mac: ""
         ip: "192.168.122.120"
         domain: "local"
-        subnet: "192.168.122.0/24"
+        subnet: "satellite-network"
 
   tasks:
 
