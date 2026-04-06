@@ -35,6 +35,38 @@
       set_fact:
         hg_id: "{{ hg_result.json.results[0].id }}"
 
+    - name: Get location ID
+      uri:
+        url: "https://satellite.local/api/locations?search=name%3DTunis"
+        method: GET
+        user: "admin"
+        password: "123456"
+        validate_certs: false
+        force_basic_auth: yes
+        headers:
+          Content-Type: "application/json"
+      register: loc_result
+
+    - name: Set location ID
+      set_fact:
+        loc_id: "{{ loc_result.json.results[0].id }}"
+
+    - name: Get organization ID
+      uri:
+        url: "https://satellite.local/api/organizations?search=name%3Dlinsoft"
+        method: GET
+        user: "admin"
+        password: "123456"
+        validate_certs: false
+        force_basic_auth: yes
+        headers:
+          Content-Type: "application/json"
+      register: org_result
+
+    - name: Set organization ID
+      set_fact:
+        org_id: "{{ org_result.json.results[0].id }}"
+
     - name: Create and provision VM via Satellite API
       uri:
         url: "https://satellite.local/api/hosts"
@@ -50,8 +82,8 @@
         body:
           host:
             name: "{{ vm_name }}"
-            organization: "linsoft"
-            location: "Tunis"
+            organization_id: "{{ org_id }}"
+            location_id: "{{ loc_id }}"
             hostgroup_id: "{{ hg_id }}"
             compute_resource_id: "{{ cr_id }}"
             compute_profile: "satellite-vm"
