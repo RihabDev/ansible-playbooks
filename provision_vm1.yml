@@ -53,7 +53,7 @@
 
     - name: Get organization ID
       uri:
-        url: "https://satellite.local/api/organizations?search=name%3Dlinsoft"
+        url: "https://satellite.local/api/organizations?search=name%3DLinsoft"
         method: GET
         user: "admin"
         password: "123456"
