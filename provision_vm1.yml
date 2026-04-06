@@ -67,6 +67,22 @@
       set_fact:
         org_id: "{{ org_result.json.results[0].id }}"
 
+    - name: Get compute profile ID
+      uri:
+        url: "https://satellite.local/api/compute_profiles?search=name%3Dsatellite-vm"
+        method: GET
+        user: "admin"
+        password: "123456"
+        validate_certs: false
+        force_basic_auth: yes
+        headers:
+          Content-Type: "application/json"
+      register: cp_result
+
+    - name: Set compute profile ID
+      set_fact:
+        cp_id: "{{ cp_result.json.results[0].id }}"
+
     - name: Create and provision VM via Satellite API
       uri:
         url: "https://satellite.local/api/hosts"
@@ -86,7 +102,7 @@
             location_id: "{{ loc_id }}"
             hostgroup_id: "{{ hg_id }}"
             compute_resource_id: "{{ cr_id }}"
-            compute_profile: "satellite-vm"
+            compute_profile_id: "{{ cp_id }}"
             root_pass: "12345678"
             build: true
             ip: "{{ vm_ip }}"
