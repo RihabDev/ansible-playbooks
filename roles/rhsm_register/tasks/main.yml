@@ -1,0 +1,37 @@
+---
+- name: Install Satellite Katello CA certificate
+  dnf:
+    name: "http://{{ rhsm_satellite_fqdn }}/pub/katello-ca-consumer-latest.noarch.rpm"
+    state: present
+    disable_gpg_check: yes
+
+- name: Clean any previous RHSM state
+  command: subscription-manager clean
+  changed_when: false
+
+- name: Register with Satellite using activation key
+  community.general.redhat_subscription:
+    state: present
+    org_id: "{{ rhsm_org }}"
+    activationkey: "{{ rhsm_activationkey }}"
+    server_hostname: "{{ rhsm_satellite_fqdn }}"
+    force_register: yes
+
+- name: Verify registration status
+  command: subscription-manager status
+  register: rhsm_status
+  changed_when: false
+  failed_when:
+    - "'Current' not in rhsm_status.stdout"
+    - "'Registered' not in rhsm_status.stdout"
+
+- name: Enable katello-agent for Satellite remote execution
+  dnf:
+    name: katello-agent
+    state: present
+
+- name: Start and enable goferd (katello-agent)
+  systemd:
+    name: goferd
+    state: started
+    enabled: yes
