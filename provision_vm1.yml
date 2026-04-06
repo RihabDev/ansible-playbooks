@@ -7,12 +7,12 @@
   tasks:
     - name: Create and provision VM
       theforeman.foreman.host:
-        server_url: "http://satellite.local"
+        server_url: "https://satellite.local"
         username: "admin"
         password: "123456"
         validate_certs: false
         name: "{{ vm_name }}"
-        organization: "linsoft"
+        organization: "Linsoft"
         location: "Tunis"
         hostgroup: "RHEL9-Group"
         compute_resource: "KVM-local"
