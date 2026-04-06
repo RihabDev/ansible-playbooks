@@ -3,6 +3,38 @@
   hosts: localhost
   gather_facts: false
   tasks:
+    - name: Get compute resource ID
+      uri:
+        url: "https://satellite.local/api/compute_resources?search=name%3DKVM-local"
+        method: GET
+        user: "admin"
+        password: "123456"
+        validate_certs: false
+        force_basic_auth: yes
+        headers:
+          Content-Type: "application/json"
+      register: cr_result
+
+    - name: Set compute resource ID
+      set_fact:
+        cr_id: "{{ cr_result.json.results[0].id }}"
+
+    - name: Get hostgroup ID
+      uri:
+        url: "https://satellite.local/api/hostgroups?search=name%3DRHEL9-Group"
+        method: GET
+        user: "admin"
+        password: "123456"
+        validate_certs: false
+        force_basic_auth: yes
+        headers:
+          Content-Type: "application/json"
+      register: hg_result
+
+    - name: Set hostgroup ID
+      set_fact:
+        hg_id: "{{ hg_result.json.results[0].id }}"
+
     - name: Create and provision VM via Satellite API
       uri:
         url: "https://satellite.local/api/hosts"
@@ -20,8 +52,8 @@
             name: "{{ vm_name }}"
             organization: "linsoft"
             location: "Tunis"
-            hostgroup: "RHEL9-Group"
-            compute_resource: "KVM-local"
+            hostgroup_id: "{{ hg_id }}"
+            compute_resource_id: "{{ cr_id }}"
             compute_profile: "satellite-vm"
             root_pass: "12345678"
             build: true
