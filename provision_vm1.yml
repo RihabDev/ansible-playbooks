@@ -2,35 +2,32 @@
 - name: Play 1 - Provision VM via Satellite
   hosts: localhost
   gather_facts: false
-  collections:
-    - theforeman.foreman
   tasks:
-    - name: Create and provision VM
-      theforeman.foreman.host:
-        server_url: "https://satellite.local"
-        username: "admin"
+    - name: Create and provision VM via Satellite API
+      uri:
+        url: "https://satellite.local/api/hosts"
+        method: POST
+        user: "admin"
         password: "123456"
         validate_certs: false
-        name: "{{ vm_name }}"
-        organization: "Linsoft"
-        location: "Tunis"
-        hostgroup: "RHEL9-Group"
-        compute_resource: "KVM-local"
-        compute_profile: "satellite-vm"
-        root_pass: "12345678"
-        openscap_proxy: "satellite.local"
-        ptable: "Kickstart default"
-        pxe_loader: "PXELinux BIOS"
-        build: true
-        state: present
-        interfaces_attributes:
-          - primary: true
-            provision: true
+        force_basic_auth: yes
+        status_code: 201
+        headers:
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          host:
+            name: "{{ vm_name }}"
+            organization: "linsoft"
+            location: "Tunis"
+            hostgroup: "RHEL9-Group"
+            compute_resource: "KVM-local"
+            compute_profile: "satellite-vm"
+            root_pass: "12345678"
+            build: true
             ip: "{{ vm_ip }}"
-            subnet: "satellite-network"
-            domain: "local"
 
-    - name: Wait for VM to finish kickstart and come online
+    - name: Wait for VM to come online
       wait_for:
         host: "{{ vm_ip }}"
         port: 22
