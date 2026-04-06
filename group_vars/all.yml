@@ -1,0 +1,24 @@
+satellite_url: "http://satellite.linsoft.local"
+satellite_user: "admin"
+satellite_password: "{{ vault_satellite_password }}"
+
+vm_name: "target2.linsoft.local"
+vm_ip: "192.168.1.220"
+organization: "linsoft"
+location: "Default Location"
+hostgroup: "RHEL9-Group"
+compute_resource: "KVM-local"
+root_pass: "{{ vault_root_pass }}"
+openscap_capsule: "satellite.local"
+subnet: "satellite-network"
+domain: "local"
+
+rhsm_org: "linsoft"
+rhsm_activationkey: "RHEL-AK"
+rhsm_satellite_fqdn: "satellite.local"
+
+prometheus_server: "192.168.122.247"   # your Prometheus VM IP
+node_exporter_version: "1.8.1"
+
+ssh_permit_root_login: "no"
+ssh_password_auth: "no"
