@@ -1,0 +1,56 @@
+---
+- name: Play 1 - Provision VM via Satellite
+  hosts: localhost
+  gather_facts: false
+  collections:
+    - theforeman.foreman
+  tasks:
+    - name: Create and provision VM
+      theforeman.foreman.host:
+        server_url: "http://satellite.local"
+        username: "admin"
+        password: "123456"
+        validate_certs: false
+        name: "{{ vm_name }}"
+        organization: "linsoft"
+        location: "Tunis"
+        hostgroup: "RHEL9-Group"
+        compute_resource: "KVM-local"
+        compute_profile: "satellite-vm"
+        root_pass: "12345678"
+        openscap_proxy: "satellite.local"
+        ptable: "Kickstart default"
+        pxe_loader: "PXELinux BIOS"
+        build: true
+        state: present
+        interfaces_attributes:
+          - primary: true
+            provision: true
+            ip: "{{ vm_ip }}"
+            subnet: "satellite-network"
+            domain: "local"
+
+    - name: Wait for VM to finish kickstart and come online
+      wait_for:
+        host: "{{ vm_ip }}"
+        port: 22
+        delay: 60
+        timeout: 600
+        state: started
+
+    - name: Add new VM to in-memory inventory
+      add_host:
+        name: "{{ vm_name }}"
+        ansible_host: "{{ vm_ip }}"
+        ansible_user: root
+        ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
+        groups: newly_provisioned
+
+- name: Play 2 - Configure new VM
+  hosts: newly_provisioned
+  gather_facts: true
+  become: yes
+  roles:
+    - role: rhsm_register
+    - role: hardening
+    - role: node_exporter
