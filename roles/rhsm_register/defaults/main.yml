@@ -1,0 +1,3 @@
+rhsm_org: "linsoft"
+rhsm_activationkey: "RHEL-AK"
+rhsm_satellite_fqdn: "satellite.local"
