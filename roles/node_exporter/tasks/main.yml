@@ -1,0 +1,73 @@
+---
+- name: Create node_exporter system user
+  user:
+    name: node_exporter
+    shell: /sbin/nologin
+    system: yes
+    create_home: no
+
+- name: Download node_exporter binary
+  get_url:
+    url: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
+    dest: /tmp/node_exporter.tar.gz
+    mode: '0644'
+
+- name: Extract node_exporter
+  unarchive:
+    src: /tmp/node_exporter.tar.gz
+    dest: /tmp/
+    remote_src: yes
+
+- name: Install node_exporter binary
+  copy:
+    src: "/tmp/node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter"
+    dest: /usr/local/bin/node_exporter
+    owner: node_exporter
+    group: node_exporter
+    mode: '0755'
+    remote_src: yes
+
+- name: Deploy systemd service unit
+  template:
+    src: node_exporter.service.j2
+    dest: /etc/systemd/system/node_exporter.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart node_exporter
+
+- name: Open firewall port {{ node_exporter_port }}
+  firewalld:
+    port: "{{ node_exporter_port }}/tcp"
+    permanent: yes
+    state: enabled
+    immediate: yes
+
+- name: Start and enable node_exporter
+  systemd:
+    name: node_exporter
+    state: started
+    enabled: yes
+    daemon_reload: yes
+
+- name: Register VM as Prometheus scrape target
+  delegate_to: "{{ prometheus_server }}"
+  copy:
+    content: |
+      - targets:
+          - "{{ ansible_host }}:{{ node_exporter_port }}"
+        labels:
+          hostname: "{{ inventory_hostname }}"
+          org: "{{ rhsm_org | default('linsoft') }}"
+    dest: "/etc/prometheus/targets/{{ inventory_hostname }}.yml"
+    owner: prometheus
+    group: prometheus
+    mode: '0644'
+
+- name: Verify node_exporter is responding
+  uri:
+    url: "http://{{ ansible_host }}:{{ node_exporter_port }}/metrics"
+    status_code: 200
+  delegate_to: localhost
+  retries: 3
+  delay: 5
