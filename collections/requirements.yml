@@ -1,2 +1,4 @@
+---
 collections:
   - name: theforeman.foreman
+    version: ">=3.0.0"
