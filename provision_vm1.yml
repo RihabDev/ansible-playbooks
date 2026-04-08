@@ -101,7 +101,6 @@
     - set_fact:
         domain_id: "{{ domain_result.json.results[0].id }}"
 
-    # 🔥 CREATE VM (keep vm_ip because Satellite requires it)
     - name: Create and provision VM via Satellite API
       uri:
         url: "{{ satellite_url }}/api/hosts"
@@ -127,12 +126,10 @@
             interfaces_attributes:
               - primary: true
                 provision: true
-                ip: "{{ vm_ip }}"   # required but NOT trusted
                 subnet_id: "{{ sn_id }}"
                 domain_id: "{{ domain_id }}"
       register: provision_result
 
-    # ⏳ Wait until Satellite knows the host
     - name: Wait for host to appear in Satellite
       uri:
         url: "{{ satellite_url }}/api/hosts/{{ vm_name }}"
