@@ -9,7 +9,6 @@
     satellite_password: "123456"
 
   tasks:
-
     - name: Get compute resource ID
       uri:
         url: "{{ satellite_url }}/api/compute_resources?search=name%3DKVM-local"
@@ -143,8 +142,7 @@
       retries: 10
       delay: 10
 
-    # ⏳ Wait until IP is actually assigned
-    - name: Wait until Satellite assigns real IP
+    - name: Wait until Satellite reports real IP
       uri:
         url: "{{ satellite_url }}/api/hosts/{{ vm_name }}"
         method: GET
@@ -157,16 +155,14 @@
       retries: 20
       delay: 15
 
-    # 🎯 Extract real IP
     - name: Set real VM IP
       set_fact:
         real_vm_ip: "{{ host_info.json.ip }}"
 
-    - name: Debug real IP (important)
+    - name: Debug real IP
       debug:
-        msg: "VM is reachable at {{ real_vm_ip }}"
+        msg: "VM {{ vm_name }} is reachable at {{ real_vm_ip }}"
 
-    # ⏳ Wait for SSH on REAL IP
     - name: Wait for VM to come online
       wait_for:
         host: "{{ real_vm_ip }}"
@@ -175,8 +171,7 @@
         timeout: 6000
         state: started
 
-    # ➕ Add VM to inventory using REAL IP
-    - name: Add new VM to in-memory inventory
+    - name: Add new VM to inventory
       add_host:
         name: "{{ vm_name }}"
         ansible_host: "{{ real_vm_ip }}"
@@ -189,7 +184,6 @@
   hosts: newly_provisioned
   gather_facts: true
   become: yes
-
   roles:
     - role: rhsm_register
     - role: hardening
