@@ -2,16 +2,18 @@
 - name: Play 1 - Provision VM via Satellite (Semi-Dynamic IP)
   hosts: localhost
   gather_facts: false
+
   vars_files:
     - vars.yml
-  
-tasks:
+
+  tasks:
+
     - name: Get compute resource ID
       uri:
-        url: "https://satellite.local/api/compute_resources?search=name%3DKVM-local"
+        url: "{{ satellite_url }}/api/compute_resources?search=name%3DKVM-local"
         method: GET
-        user: "admin"
-        password: "123456"
+        user: "{{ satellite_user }}"
+        password: "{{ satellite_password }}"
         validate_certs: false
         force_basic_auth: yes
         headers:
@@ -24,10 +26,10 @@ tasks:
 
     - name: Get hostgroup ID
       uri:
-        url: "https://satellite.local/api/hostgroups?search=name%3DRHEL9-Group"
+        url: "{{ satellite_url }}/api/hostgroups?search=name%3DRHEL9-Group"
         method: GET
-        user: "admin"
-        password: "123456"
+        user: "{{ satellite_user }}"
+        password: "{{ satellite_password }}"
         validate_certs: false
         force_basic_auth: yes
         headers:
@@ -40,10 +42,10 @@ tasks:
 
     - name: Get location ID
       uri:
-        url: "https://satellite.local/api/locations?search=name%3DTunis"
+        url: "{{ satellite_url }}/api/locations?search=name%3DTunis"
         method: GET
-        user: "admin"
-        password: "123456"
+        user: "{{ satellite_user }}"
+        password: "{{ satellite_password }}"
         validate_certs: false
         force_basic_auth: yes
         headers:
@@ -56,10 +58,10 @@ tasks:
 
     - name: Get organization ID
       uri:
-        url: "https://satellite.local/api/organizations?search=name%3DLinsoft"
+        url: "{{ satellite_url }}/api/organizations?search=name%3DLinsoft"
         method: GET
-        user: "admin"
-        password: "123456"
+        user: "{{ satellite_user }}"
+        password: "{{ satellite_password }}"
         validate_certs: false
         force_basic_auth: yes
         headers:
@@ -72,10 +74,10 @@ tasks:
 
     - name: Get compute profile ID
       uri:
-        url: "https://satellite.local/api/compute_profiles?search=name%3Dsatellite-vm"
+        url: "{{ satellite_url }}/api/compute_profiles?search=name%3Dsatellite-vm"
         method: GET
-        user: "admin"
-        password: "123456"
+        user: "{{ satellite_user }}"
+        password: "{{ satellite_password }}"
         validate_certs: false
         force_basic_auth: yes
         headers:
@@ -88,10 +90,10 @@ tasks:
 
     - name: Get subnet ID
       uri:
-        url: "https://satellite.local/api/subnets?search=name%3Dsatellite-network"
+        url: "{{ satellite_url }}/api/subnets?search=name%3Dsatellite-network"
         method: GET
-        user: "admin"
-        password: "123456"
+        user: "{{ satellite_user }}"
+        password: "{{ satellite_password }}"
         validate_certs: false
         force_basic_auth: yes
         headers:
@@ -104,10 +106,10 @@ tasks:
 
     - name: Get domain ID
       uri:
-        url: "https://satellite.local/api/domains?search=name%3Dlocal"
+        url: "{{ satellite_url }}/api/domains?search=name%3Dlocal"
         method: GET
-        user: "admin"
-        password: "123456"
+        user: "{{ satellite_user }}"
+        password: "{{ satellite_password }}"
         validate_certs: false
         force_basic_auth: yes
         headers:
@@ -118,7 +120,7 @@ tasks:
       set_fact:
         domain_id: "{{ domain_result.json.results[0].id }}"
 
-    - name: Get subnet details (to find available IP range)
+    - name: Get subnet details
       uri:
         url: "{{ satellite_url }}/api/subnets/{{ sn_id }}"
         method: GET
@@ -130,7 +132,7 @@ tasks:
           Content-Type: "application/json"
       register: subnet_details
 
-    - name: Get all existing hosts in the subnet
+    - name: Get all existing hosts in subnet
       uri:
         url: "{{ satellite_url }}/api/hosts?search=subnet_id%3D{{ sn_id }}"
         method: GET
@@ -142,18 +144,39 @@ tasks:
           Content-Type: "application/json"
       register: existing_hosts
 
-    - name: Find an available IP address
+
+    - name: Generate candidate IP list (.120-.200)
       set_fact:
-        vm_ip: "{{ lookup('ansible.builtin.sequence', 'start=120 end=200', '{{ subnet_details.json.network }}') | map('ipaddr', subnet_details.json.netmask) | select('search', subnet_details.json.network) | difference(existing_hosts.json.results | map(attribute='ip')) | first }}"
-      vars:
-        subnet_network: "{{ subnet_details.json.network | ansible.builtin.ipaddr('network') }}"
-        subnet_prefix: "{{ subnet_details.json.netmask | ansible.builtin.ipaddr('prefix') }}"
+        candidate_ips: >-
+          {{ query('ansible.builtin.sequence',
+                   'start=120',
+                   'end=200')
+             | map('regex_replace',
+                   '^',
+                   subnet_details.json.network.split('.')[0] ~ '.' ~
+                   subnet_details.json.network.split('.')[1] ~ '.' ~
+                   subnet_details.json.network.split('.')[2] ~ '.')
+             | list }}
+
+    - name: Extract used IP addresses
+      set_fact:
+        used_ips: "{{ existing_hosts.json.results | map(attribute='ip') | list }}"
+
+    - name: Find first available IP
+      set_fact:
+        vm_ip: "{{ (candidate_ips | difference(used_ips)) | first }}"
+
+    - name: Fail if no IP available
+      fail:
+        msg: "No available IP found in range 120-200"
+      when: vm_ip is not defined
 
     - name: Debug - Show selected IP
       debug:
         msg: "Using IP address: {{ vm_ip }}"
 
-    - name: Create and provision VM with the available IP
+
+    - name: Create and provision VM
       uri:
         url: "{{ satellite_url }}/api/hosts"
         method: POST
@@ -183,20 +206,23 @@ tasks:
                 domain_id: "{{ domain_id }}"
       register: provision_result
 
-    - name: Verify VM was created with correct IP
+    - name: Verify VM creation
       debug:
-        msg: 
+        msg:
           - "VM provisioned successfully!"
           - "VM Name: {{ provision_result.json.host.name }}"
-          - "Assigned IP: {{ provision_result.json.host.ip }}"
+          - "Assigned IP: {{ vm_ip }}"
 
-    - name: Wait for VM to be ready on SSH port
+
+
+    - name: Wait for VM SSH
       wait_for:
         host: "{{ vm_ip }}"
         port: 22
-        delay: "{{ wait_delay }}"
-        timeout: "{{ wait_timeout }}"
+        delay: "60"
+        timeout: "6000"
         state: started
+
 
     - name: Add VM to inventory
       add_host:
@@ -207,19 +233,13 @@ tasks:
         ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
         groups: newly_provisioned
 
-- name: Play 2 - Configure the new VM
-  hosts: newly_provisioned
-  gather_facts: true
-  become: yes
-  vars_files:
-    - vars.yml
-  
-  tasks:
-    - name: Test connection
-      ping:
 
-    - name: Show VM details
-      debug:
-        msg:
-          - "Successfully connected to {{ ansible_hostname }}"
-          - "IP Address: {{ ansible_default_ipv4.address }}"
+   - name: Play 2 - Configure new VM
+     hosts: newly_provisioned
+     gather_facts: true
+     become: yes
+
+    roles:
+      - role: rhsm_register
+      - role: hardening
+      - role: node_exporter
