@@ -112,7 +112,7 @@
         host: "{{ vm_ip }}"
         port: 22
         delay: 60
-        timeout: 2000
+        timeout: 9000
         state: started
 
     - name: Add new VM to in-memory inventory
