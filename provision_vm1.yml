@@ -140,11 +140,14 @@
             interfaces_attributes:
               - primary: true
                 provision: true
-                ip: "{{ vm_ip }}"
                 subnet_id: "{{ sn_id }}"
                 domain_id: "{{ domain_id }}"
       register: provision_result
-
+      
+    - name: Get ip 
+      set_fact:
+        vm_ip: "{{ provision_result.json.host.ip }}"
+        
     - name: Wait for VM to come online
       wait_for:
         host: "{{ vm_ip }}"
