@@ -234,12 +234,12 @@
         groups: newly_provisioned
 
 
-   - name: Play 2 - Configure new VM
-     hosts: newly_provisioned
-     gather_facts: true
-     become: yes
+    - name: Play 2 - Configure new VM
+      hosts: newly_provisioned
+      gather_facts: true
+      become: yes
 
-    roles:
-      - role: rhsm_register
-      - role: hardening
-      - role: node_exporter
+      roles:
+        - role: rhsm_register
+        - role: hardening
+        - role: node_exporter
