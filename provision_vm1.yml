@@ -1,10 +1,12 @@
 ---
-- name: Play 1 - Provision VM via Satellite (Semi-Dynamic IP)
+- name: Play 1 - Provision VM via Satellite
   hosts: localhost
   gather_facts: false
 
-  vars_files:
-    - vars.yml
+  vars:
+    satellite_url: "https://satellite.local"
+    satellite_user: "admin"
+    satellite_password: "123456"
 
   tasks:
 
@@ -16,12 +18,9 @@
         password: "{{ satellite_password }}"
         validate_certs: false
         force_basic_auth: yes
-        headers:
-          Content-Type: "application/json"
       register: cr_result
 
-    - name: Set compute resource ID
-      set_fact:
+    - set_fact:
         cr_id: "{{ cr_result.json.results[0].id }}"
 
     - name: Get hostgroup ID
@@ -32,12 +31,9 @@
         password: "{{ satellite_password }}"
         validate_certs: false
         force_basic_auth: yes
-        headers:
-          Content-Type: "application/json"
       register: hg_result
 
-    - name: Set hostgroup ID
-      set_fact:
+    - set_fact:
         hg_id: "{{ hg_result.json.results[0].id }}"
 
     - name: Get location ID
@@ -48,12 +44,9 @@
         password: "{{ satellite_password }}"
         validate_certs: false
         force_basic_auth: yes
-        headers:
-          Content-Type: "application/json"
       register: loc_result
 
-    - name: Set location ID
-      set_fact:
+    - set_fact:
         loc_id: "{{ loc_result.json.results[0].id }}"
 
     - name: Get organization ID
@@ -64,12 +57,9 @@
         password: "{{ satellite_password }}"
         validate_certs: false
         force_basic_auth: yes
-        headers:
-          Content-Type: "application/json"
       register: org_result
 
-    - name: Set organization ID
-      set_fact:
+    - set_fact:
         org_id: "{{ org_result.json.results[0].id }}"
 
     - name: Get compute profile ID
@@ -80,12 +70,9 @@
         password: "{{ satellite_password }}"
         validate_certs: false
         force_basic_auth: yes
-        headers:
-          Content-Type: "application/json"
       register: cp_result
 
-    - name: Set compute profile ID
-      set_fact:
+    - set_fact:
         cp_id: "{{ cp_result.json.results[0].id }}"
 
     - name: Get subnet ID
@@ -96,12 +83,9 @@
         password: "{{ satellite_password }}"
         validate_certs: false
         force_basic_auth: yes
-        headers:
-          Content-Type: "application/json"
       register: sn_result
 
-    - name: Set subnet ID
-      set_fact:
+    - set_fact:
         sn_id: "{{ sn_result.json.results[0].id }}"
 
     - name: Get domain ID
@@ -112,69 +96,13 @@
         password: "{{ satellite_password }}"
         validate_certs: false
         force_basic_auth: yes
-        headers:
-          Content-Type: "application/json"
       register: domain_result
 
-    - name: Set domain ID
-      set_fact:
+    - set_fact:
         domain_id: "{{ domain_result.json.results[0].id }}"
 
-    - name: Get subnet details
-      uri:
-        url: "{{ satellite_url }}/api/subnets/{{ sn_id }}"
-        method: GET
-        user: "{{ satellite_user }}"
-        password: "{{ satellite_password }}"
-        validate_certs: false
-        force_basic_auth: yes
-        headers:
-          Content-Type: "application/json"
-      register: subnet_details
-
-    - name: Get all existing hosts in subnet
-      uri:
-        url: "{{ satellite_url }}/api/hosts?search=subnet_id%3D{{ sn_id }}"
-        method: GET
-        user: "{{ satellite_user }}"
-        password: "{{ satellite_password }}"
-        validate_certs: false
-        force_basic_auth: yes
-        headers:
-          Content-Type: "application/json"
-      register: existing_hosts
-
-    - name: Generate candidate IP list (.120-.200)
-      set_fact:
-        candidate_ips: >-
-          {{
-            query('ansible.builtin.sequence', 'start=120 end=200')
-            | map('regex_replace',
-                  '^',
-                  subnet_details.json.network.split('.')[0] ~ '.' ~
-                  subnet_details.json.network.split('.')[1] ~ '.' ~
-                  subnet_details.json.network.split('.')[2] ~ '.')
-            | list
-          }}
-
-    - name: Extract used IP addresses
-      set_fact:
-        used_ips: "{{ existing_hosts.json.results | map(attribute='ip') | list }}"
-
-    - name: Find first available IP
-      set_fact:
-        vm_ip: "{{ (candidate_ips | difference(used_ips)) | first }}"
-
-    - name: Fail if no IP available
-      fail:
-        msg: "No available IP found in range 120-200"
-      when: vm_ip is not defined
-
-    - name: Debug - Show selected IP
-      debug:
-        msg: "Using IP address: {{ vm_ip }}"
-
-    - name: Create and provision VM
+    # 🔥 CREATE VM (keep vm_ip because Satellite requires it)
+    - name: Create and provision VM via Satellite API
       uri:
         url: "{{ satellite_url }}/api/hosts"
         method: POST
@@ -194,37 +122,68 @@
             hostgroup_id: "{{ hg_id }}"
             compute_resource_id: "{{ cr_id }}"
             compute_profile_id: "{{ cp_id }}"
-            root_pass: "{{ root_password }}"
+            root_pass: "12345678"
             build: true
             interfaces_attributes:
               - primary: true
                 provision: true
-                ip: "{{ vm_ip }}"
+                ip: "{{ vm_ip }}"   # required but NOT trusted
                 subnet_id: "{{ sn_id }}"
                 domain_id: "{{ domain_id }}"
       register: provision_result
 
-    - name: Verify VM creation
-      debug:
-        msg:
-          - "VM provisioned successfully!"
-          - "VM Name: {{ provision_result.json.host.name }}"
-          - "Assigned IP: {{ vm_ip }}"
+    # ⏳ Wait until Satellite knows the host
+    - name: Wait for host to appear in Satellite
+      uri:
+        url: "{{ satellite_url }}/api/hosts/{{ vm_name }}"
+        method: GET
+        user: "{{ satellite_user }}"
+        password: "{{ satellite_password }}"
+        validate_certs: false
+        force_basic_auth: yes
+      register: host_info
+      until: host_info.json is defined
+      retries: 10
+      delay: 10
 
-    - name: Wait for VM SSH
+    # ⏳ Wait until IP is actually assigned
+    - name: Wait until Satellite assigns real IP
+      uri:
+        url: "{{ satellite_url }}/api/hosts/{{ vm_name }}"
+        method: GET
+        user: "{{ satellite_user }}"
+        password: "{{ satellite_password }}"
+        validate_certs: false
+        force_basic_auth: yes
+      register: host_info
+      until: host_info.json.ip is defined and host_info.json.ip != ""
+      retries: 20
+      delay: 15
+
+    # 🎯 Extract real IP
+    - name: Set real VM IP
+      set_fact:
+        real_vm_ip: "{{ host_info.json.ip }}"
+
+    - name: Debug real IP (important)
+      debug:
+        msg: "VM is reachable at {{ real_vm_ip }}"
+
+    # ⏳ Wait for SSH on REAL IP
+    - name: Wait for VM to come online
       wait_for:
-        host: "{{ vm_ip }}"
+        host: "{{ real_vm_ip }}"
         port: 22
         delay: 60
         timeout: 6000
         state: started
 
-    - name: Add VM to inventory
+    # ➕ Add VM to inventory using REAL IP
+    - name: Add new VM to in-memory inventory
       add_host:
         name: "{{ vm_name }}"
-        ansible_host: "{{ vm_ip }}"
+        ansible_host: "{{ real_vm_ip }}"
         ansible_user: root
-        ansible_password: "{{ root_password }}"
         ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
         groups: newly_provisioned
 
@@ -235,6 +194,6 @@
   become: yes
 
   roles:
-    - rhsm_register
-    - hardening
-    - node_exporter
+    - role: rhsm_register
+    - role: hardening
+    - role: node_exporter
