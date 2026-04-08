@@ -144,19 +144,18 @@
           Content-Type: "application/json"
       register: existing_hosts
 
-
     - name: Generate candidate IP list (.120-.200)
       set_fact:
         candidate_ips: >-
-          {{ query('ansible.builtin.sequence',
-                   'start=120',
-                   'end=200')
-             | map('regex_replace',
-                   '^',
-                   subnet_details.json.network.split('.')[0] ~ '.' ~
-                   subnet_details.json.network.split('.')[1] ~ '.' ~
-                   subnet_details.json.network.split('.')[2] ~ '.')
-             | list }}
+          {{
+            query('ansible.builtin.sequence', 'start=120 end=200')
+            | map('regex_replace',
+                  '^',
+                  subnet_details.json.network.split('.')[0] ~ '.' ~
+                  subnet_details.json.network.split('.')[1] ~ '.' ~
+                  subnet_details.json.network.split('.')[2] ~ '.')
+            | list
+          }}
 
     - name: Extract used IP addresses
       set_fact:
@@ -174,7 +173,6 @@
     - name: Debug - Show selected IP
       debug:
         msg: "Using IP address: {{ vm_ip }}"
-
 
     - name: Create and provision VM
       uri:
@@ -213,16 +211,13 @@
           - "VM Name: {{ provision_result.json.host.name }}"
           - "Assigned IP: {{ vm_ip }}"
 
-
-
     - name: Wait for VM SSH
       wait_for:
         host: "{{ vm_ip }}"
         port: 22
-        delay: "60"
-        timeout: "6000"
+        delay: 60
+        timeout: 6000
         state: started
-
 
     - name: Add VM to inventory
       add_host:
@@ -234,12 +229,12 @@
         groups: newly_provisioned
 
 
-    - name: Play 2 - Configure new VM
-      hosts: newly_provisioned
-      gather_facts: true
-      become: yes
+- name: Play 2 - Configure new VM
+  hosts: newly_provisioned
+  gather_facts: true
+  become: yes
 
-      roles:
-        - role: rhsm_register
-        - role: hardening
-        - role: node_exporter
+  roles:
+    - rhsm_register
+    - hardening
+    - node_exporter
