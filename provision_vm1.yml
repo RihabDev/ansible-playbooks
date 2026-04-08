@@ -83,6 +83,38 @@
       set_fact:
         cp_id: "{{ cp_result.json.results[0].id }}"
 
+    - name: Get subnet ID
+      uri:
+        url: "https://satellite.local/api/subnets?search=name%3Dsatellite-network"
+        method: GET
+        user: "admin"
+        password: "123456"
+        validate_certs: false
+        force_basic_auth: yes
+        headers:
+          Content-Type: "application/json"
+      register: sn_result
+
+    - name: Set subnet ID
+      set_fact:
+        sn_id: "{{ sn_result.json.results[0].id }}"
+
+    - name: Get domain ID
+      uri:
+        url: "https://satellite.local/api/domains?search=name%3Dlocal"
+        method: GET
+        user: "admin"
+        password: "123456"
+        validate_certs: false
+        force_basic_auth: yes
+        headers:
+          Content-Type: "application/json"
+      register: domain_result
+
+    - name: Set domain ID
+      set_fact:
+        domain_id: "{{ domain_result.json.results[0].id }}"
+
     - name: Create and provision VM via Satellite API
       uri:
         url: "https://satellite.local/api/hosts"
@@ -105,14 +137,20 @@
             compute_profile_id: "{{ cp_id }}"
             root_pass: "12345678"
             build: true
-            ip: "{{ vm_ip }}"
+            interfaces_attributes:
+              - primary: true
+                provision: true
+                ip: "{{ vm_ip }}"
+                subnet_id: "{{ sn_id }}"
+                domain_id: "{{ domain_id }}"
+      register: provision_result
 
     - name: Wait for VM to come online
       wait_for:
         host: "{{ vm_ip }}"
         port: 22
         delay: 60
-        timeout: 9000
+        timeout: 600
         state: started
 
     - name: Add new VM to in-memory inventory
