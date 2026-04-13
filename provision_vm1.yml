@@ -177,6 +177,5 @@
   gather_facts: true
   become: yes
   roles:
-    - role: rhsm_register
     - role: hardening
     - role: node_exporter
