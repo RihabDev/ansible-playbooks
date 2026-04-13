@@ -129,62 +129,31 @@
                 domain_id: "{{ domain_id }}"
       register: provision_result
 
-    - name: Wait for host to appear in Satellite
-      uri:
-        url: "{{ satellite_url }}/api/hosts/{{ vm_name }}"
-        method: GET
-        user: "{{ satellite_user }}"
-        password: "{{ satellite_password }}"
-        validate_certs: false
-        force_basic_auth: yes
-      register: host_info
-      until: host_info.json is defined
-      retries: 10
-      delay: 10
+    - name: Wait for kickstart to complete
+      pause:
+        minutes: 3
+        prompt: "Waiting for kickstart to complete..."
 
-    - name: Wait until Satellite reports real IP
-      uri:
-        url: "{{ satellite_url }}/api/hosts/{{ vm_name }}"
-        method: GET
-        user: "{{ satellite_user }}"
-        password: "{{ satellite_password }}"
-        validate_certs: false
-        force_basic_auth: yes
-      register: host_info
-      until: host_info.json.ip is defined and host_info.json.ip != ""
-      retries: 20
-      delay: 15
-
-    - name: Set real VM IP
-      set_fact:
-        real_vm_ip: "{{ host_info.json.ip }}"
-
-    - name: Debug real IP
-      debug:
-        msg: "VM {{ vm_name }} is reachable at {{ real_vm_ip }}"
-
-    - name: Wait for VM to come online
+    - name: Wait for VM SSH via hostname
       wait_for:
-        host: "{{ real_vm_ip }}"
+        host: "{{ vm_name }}"
         port: 22
-        delay: 60
-        timeout: 6000
+        delay: 30
+        timeout: 600
         state: started
 
     - name: Add new VM to inventory
       add_host:
         name: "{{ vm_name }}"
-        ansible_host: "{{ real_vm_ip }}"
+        ansible_host: "{{ vm_name }}"
         ansible_user: root
         ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
         groups: newly_provisioned
-
 
 - name: Play 2 - Configure new VM
   hosts: newly_provisioned
   gather_facts: true
   become: yes
   roles:
-    - role: rhsm_register
     - role: hardening
     - role: node_exporter
