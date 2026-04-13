@@ -9,7 +9,7 @@
     satellite_password: "123456"
     kvm_host: "192.168.122.1"
     kvm_user: "rihab"
-    kvm_password: "your_rihab_password_here"
+    kvm_password: "123456"
 
   tasks:
     - name: Get compute resource ID
