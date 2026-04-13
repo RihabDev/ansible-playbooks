@@ -133,7 +133,7 @@
 
     - name: Wait for kickstart to complete
       pause:
-        minutes: 3
+        minutes: 7
         prompt: "Waiting for kickstart to complete..."
 
     - name: Get real VM IP from KVM hypervisor
