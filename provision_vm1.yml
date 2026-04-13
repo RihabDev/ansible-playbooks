@@ -150,7 +150,7 @@
       register: virsh_result
       until: virsh_result.stdout | regex_search('\\d+\\.\\d+\\.\\d+\\.\\d+')
       retries: 10
-      delay: 15
+      delay: 600
 
     - name: Set real VM IP
       set_fact:
