@@ -134,11 +134,11 @@
 
     - name: Wait for kickstart to complete
       pause:
-        minutes: 8
+        minutes: 15
         prompt: "Waiting for kickstart to complete..."
 
     - name: Get real VM IP from KVM hypervisor
-      command: virsh domifaddr "{{ vm_name }}"
+      command: virsh domifaddr --domain "{{ vm_name }}" --source agent
       delegate_to: "{{ kvm_host }}"
       vars:
         ansible_user: "{{ kvm_user }}"
@@ -149,12 +149,12 @@
         ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
       register: virsh_result
       until: virsh_result.stdout | regex_search('\\d+\\.\\d+\\.\\d+\\.\\d+')
-      retries: 10
-      delay: 600
+      retries: 40
+      delay: 30
 
     - name: Set real VM IP
       set_fact:
-        real_vm_ip: "{{ virsh_result.stdout | regex_search('\\d+\\.\\d+\\.\\d+\\.\\d+') }}"
+        real_vm_ip: "{{ virsh_result.stdout_lines | select('search', 'ipv4') | reject('search', '127.0.0.1') | first | regex_search('\\d+\\.\\d+\\.\\d+\\.\\d+') }}"
 
     - name: Show real VM IP
       debug:
@@ -165,7 +165,7 @@
         host: "{{ real_vm_ip }}"
         port: 22
         delay: 10
-        timeout: 600
+        timeout: 300
         state: started
 
     - name: Add new VM to inventory
