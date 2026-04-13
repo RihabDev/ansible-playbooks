@@ -7,6 +7,8 @@
     satellite_url: "https://satellite.local"
     satellite_user: "admin"
     satellite_password: "123456"
+    kvm_host: "192.168.122.1"
+    kvm_user: "rihab"
 
   tasks:
     - name: Get compute resource ID
@@ -134,18 +136,38 @@
         minutes: 3
         prompt: "Waiting for kickstart to complete..."
 
-    - name: Wait for VM SSH via hostname
+    - name: Get real VM IP from KVM hypervisor
+      command: virsh domifaddr "{{ vm_name }}"
+      delegate_to: "{{ kvm_host }}"
+      vars:
+        ansible_user: "{{ kvm_user }}"
+        ansible_become: yes
+        ansible_become_method: sudo
+      register: virsh_result
+      until: virsh_result.stdout | regex_search('\\d+\\.\\d+\\.\\d+\\.\\d+')
+      retries: 10
+      delay: 15
+
+    - name: Set real VM IP
+      set_fact:
+        real_vm_ip: "{{ virsh_result.stdout | regex_search('\\d+\\.\\d+\\.\\d+\\.\\d+') }}"
+
+    - name: Show real VM IP
+      debug:
+        msg: "VM {{ vm_name }} got IP {{ real_vm_ip }} from KVM"
+
+    - name: Wait for VM SSH to be available
       wait_for:
-        host: "{{ vm_name }}"
+        host: "{{ real_vm_ip }}"
         port: 22
-        delay: 30
-        timeout: 600
+        delay: 10
+        timeout: 300
         state: started
 
     - name: Add new VM to inventory
       add_host:
         name: "{{ vm_name }}"
-        ansible_host: "{{ vm_name }}"
+        ansible_host: "{{ real_vm_ip }}"
         ansible_user: root
         ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
         groups: newly_provisioned
@@ -155,5 +177,6 @@
   gather_facts: true
   become: yes
   roles:
+    - role: rhsm_register
     - role: hardening
     - role: node_exporter
