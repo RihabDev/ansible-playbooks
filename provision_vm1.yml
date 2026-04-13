@@ -9,6 +9,7 @@
     satellite_password: "123456"
     kvm_host: "192.168.122.1"
     kvm_user: "rihab"
+    kvm_password: "your_rihab_password_here"
 
   tasks:
     - name: Get compute resource ID
@@ -133,7 +134,7 @@
 
     - name: Wait for kickstart to complete
       pause:
-        minutes: 7
+        minutes: 8
         prompt: "Waiting for kickstart to complete..."
 
     - name: Get real VM IP from KVM hypervisor
@@ -141,8 +142,11 @@
       delegate_to: "{{ kvm_host }}"
       vars:
         ansible_user: "{{ kvm_user }}"
+        ansible_password: "{{ kvm_password }}"
         ansible_become: yes
         ansible_become_method: sudo
+        ansible_become_password: "{{ kvm_password }}"
+        ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
       register: virsh_result
       until: virsh_result.stdout | regex_search('\\d+\\.\\d+\\.\\d+\\.\\d+')
       retries: 10
@@ -154,7 +158,7 @@
 
     - name: Show real VM IP
       debug:
-        msg: "VM {{ vm_name }} got IP {{ real_vm_ip }} from KVM"
+        msg: "VM {{ vm_name }} got IP {{ real_vm_ip }}"
 
     - name: Wait for VM SSH to be available
       wait_for:
@@ -169,6 +173,7 @@
         name: "{{ vm_name }}"
         ansible_host: "{{ real_vm_ip }}"
         ansible_user: root
+        ansible_password: "12345678"
         ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
         groups: newly_provisioned
 
