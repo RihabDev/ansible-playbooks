@@ -1,12 +1,44 @@
 ---
-- name: Configure existing VM
-  hosts: "{{ vm_name }}"
+- name: Prepare VM connection
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    satellite_url: "https://satellite.local"
+    satellite_user: "admin"
+    satellite_password: "123456"
+
+  tasks:
+
+    - name: Get VM IP from Satellite
+      uri:
+        url: "{{ satellite_url }}/api/hosts?search=name%3D{{ vm_name }}"
+        method: GET
+        user: "{{ satellite_user }}"
+        password: "{{ satellite_password }}"
+        validate_certs: false
+        force_basic_auth: yes
+      register: host_result
+
+    - name: Set VM IP fact
+      set_fact:
+        vm_ip: "{{ host_result.json.results[0].ip }}"
+
+    - name: Add VM to inventory
+      add_host:
+        name: "{{ vm_name }}"
+        ansible_host: "{{ vm_ip }}"
+        ansible_user: root
+        ansible_password: "12345678"
+        ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
+        groups: newly_provisioned
+
+
+- name: Configure VM
+  hosts: newly_provisioned
   gather_facts: true
   become: yes
-  vars:
-    ansible_user: root
-    ansible_password: "12345678"
-    ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
+
   roles:
     - role: hardening
     - role: node_exporter
