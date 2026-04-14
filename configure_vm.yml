@@ -1,0 +1,12 @@
+---
+- name: Configure existing VM
+  hosts: "{{ vm_name }}"
+  gather_facts: true
+  become: yes
+  vars:
+    ansible_user: root
+    ansible_password: "12345678"
+    ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
+  roles:
+    - role: hardening
+    - role: node_exporter
