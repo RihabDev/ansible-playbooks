@@ -1,0 +1,210 @@
+---
+- name: Play 1 - Provision VM via Satellite
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    satellite_url: "https://satellite.local"
+    satellite_user: "admin"
+    satellite_password: "123456"
+  
+
+  tasks:
+    - name: Get compute resource ID
+      uri:
+        url: "{{ satellite_url }}/api/compute_resources?search=name%3DKVM-local"
+        method: GET
+        user: "{{ satellite_user }}"
+        password: "{{ satellite_password }}"
+        validate_certs: false
+        force_basic_auth: yes
+      register: cr_result
+
+    - set_fact:
+        cr_id: "{{ cr_result.json.results[0].id }}"
+
+    - name: Get hostgroup ID
+      uri:
+        url: "{{ satellite_url }}/api/hostgroups?search=name%3DRHEL9-Group"
+        method: GET
+        user: "{{ satellite_user }}"
+        password: "{{ satellite_password }}"
+        validate_certs: false
+        force_basic_auth: yes
+      register: hg_result
+
+    - set_fact:
+        hg_id: "{{ hg_result.json.results[0].id }}"
+
+    - name: Get location ID
+      uri:
+        url: "{{ satellite_url }}/api/locations?search=name%3DTunis"
+        method: GET
+        user: "{{ satellite_user }}"
+        password: "{{ satellite_password }}"
+        validate_certs: false
+        force_basic_auth: yes
+      register: loc_result
+
+    - set_fact:
+        loc_id: "{{ loc_result.json.results[0].id }}"
+
+    - name: Get organization ID
+      uri:
+        url: "{{ satellite_url }}/api/organizations?search=name%3DLinsoft"
+        method: GET
+        user: "{{ satellite_user }}"
+        password: "{{ satellite_password }}"
+        validate_certs: false
+        force_basic_auth: yes
+      register: org_result
+
+    - set_fact:
+        org_id: "{{ org_result.json.results[0].id }}"
+
+    - name: Get compute profile ID
+      uri:
+        url: "{{ satellite_url }}/api/compute_profiles?search=name%3Dsatellite-vm"
+        method: GET
+        user: "{{ satellite_user }}"
+        password: "{{ satellite_password }}"
+        validate_certs: false
+        force_basic_auth: yes
+      register: cp_result
+
+    - set_fact:
+        cp_id: "{{ cp_result.json.results[0].id }}"
+
+    - name: Get subnet ID
+      uri:
+        url: "{{ satellite_url }}/api/subnets?search=name%3Dsatellite-network"
+        method: GET
+        user: "{{ satellite_user }}"
+        password: "{{ satellite_password }}"
+        validate_certs: false
+        force_basic_auth: yes
+      register: sn_result
+
+    - set_fact:
+        sn_id: "{{ sn_result.json.results[0].id }}"
+
+    - name: Get domain ID
+      uri:
+        url: "{{ satellite_url }}/api/domains?search=name%3Dlocal"
+        method: GET
+        user: "{{ satellite_user }}"
+        password: "{{ satellite_password }}"
+        validate_certs: false
+        force_basic_auth: yes
+      register: domain_result
+
+    - set_fact:
+        domain_id: "{{ domain_result.json.results[0].id }}"
+
+    - name: Create and provision VM via Satellite API
+      uri:
+        url: "{{ satellite_url }}/api/hosts"
+        method: POST
+        user: "{{ satellite_user }}"
+        password: "{{ satellite_password }}"
+        validate_certs: false
+        force_basic_auth: yes
+        status_code: 201
+        headers:
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          host:
+            name: "{{ vm_name }}"
+            organization_id: "{{ org_id }}"
+            location_id: "{{ loc_id }}"
+            hostgroup_id: "{{ hg_id }}"
+            compute_resource_id: "{{ cr_id }}"
+            compute_profile_id: "{{ cp_id }}"
+            root_pass: "12345678"
+            build: true
+            interfaces_attributes:
+              - primary: true
+                provision: true
+                subnet_id: "{{ sn_id }}"
+                domain_id: "{{ domain_id }}"
+      register: provision_result
+
+    - name: Wait for kickstart to complete
+      pause:
+        minutes: 15
+        prompt: "Waiting for kickstart to complete..."
+
+    - name: Get VM IP from Satellite
+      uri:
+        url: "{{ satellite_url }}/api/hosts/{{ vm_name }}.local"
+        method: GET
+        user: "{{ satellite_user }}"
+        password: "{{ satellite_password }}"
+        validate_certs: false
+        force_basic_auth: yes
+      register: host_info
+      until: host_info.json.ip is defined and host_info.json.ip != ""
+      retries: 10
+      delay: 30
+
+    - name: Set VM IP
+      set_fact:
+        vm_ip: "{{ host_info.json.ip }}"
+
+    - name: Show VM IP
+      debug:
+        msg: "VM {{ vm_name }} got IP {{ vm_ip }}"
+
+    - name: Wait for VM SSH to be available
+      wait_for:
+        host: "{{ vm_ip }}"
+        port: 22
+        delay: 10
+        timeout: 300
+        state: started
+
+    - name: Add new VM to inventory
+      add_host:
+        name: "{{ vm_name }}"
+        ansible_host: "{{ vm_ip }}"
+        ansible_user: root
+        ansible_password: "12345678"
+        ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
+        groups: newly_provisioned
+
+- name: Play 2 - Post-installation configuration
+  hosts: newly_provisioned
+  gather_facts: true
+  become: yes
+
+  tasks:
+    - name: Set French keyboard layout
+      command: loadkeys fr
+      changed_when: false
+
+    - name: Create user rihab
+      user:
+        name: rihab
+        password: "{{ '12345678' | password_hash('sha512') }}"
+        state: present
+        shell: /bin/bash
+        create_home: yes
+        groups: wheel
+        append: yes
+
+    - name: Ensure rihab user can use sudo without password 
+      lineinfile:
+        path: /etc/sudoers.d/rihab
+        line: 'rihab ALL=(ALL) NOPASSWD: ALL'
+        create: yes
+        mode: '0440'
+        validate: 'visudo -cf %s'
+
+- name: Play 3 - Configure new VM
+  hosts: newly_provisioned
+  gather_facts: true
+  become: yes
+  roles:
+    - role: hardening
+    - role: node_exporter
