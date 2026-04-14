@@ -11,10 +11,6 @@ openscap_capsule: "satellite.local"
 subnet: "satellite-network"
 domain: "local"
 
-rhsm_org: "linsoft"
-rhsm_activationkey: "RHEL-AK"
-rhsm_satellite_fqdn: "satellite.local"
-
 prometheus_server: "192.168.122.247"  
 node_exporter_version: "1.8.1"
 
