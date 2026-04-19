@@ -7,9 +7,7 @@
     satellite_url: "https://satellite.local"
     satellite_user: "admin"
     satellite_password: "123456"
-    kvm_host: "192.168.122.1"
-    kvm_user: "rihab"
-    kvm_password: "123456"
+  
 
   tasks:
     - name: Get compute resource ID
@@ -137,32 +135,30 @@
         minutes: 15
         prompt: "Waiting for kickstart to complete..."
 
-    - name: Get real VM IP from KVM hypervisor
-      command: virsh domifaddr --domain "{{ vm_name }}" --source agent
-      delegate_to: "{{ kvm_host }}"
-      vars:
-        ansible_user: "{{ kvm_user }}"
-        ansible_password: "{{ kvm_password }}"
-        ansible_become: yes
-        ansible_become_method: sudo
-        ansible_become_password: "{{ kvm_password }}"
-        ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
-      register: virsh_result
-      until: virsh_result.stdout | regex_search('\\d+\\.\\d+\\.\\d+\\.\\d+')
-      retries: 40
+    - name: Get VM IP from Satellite
+      uri:
+        url: "{{ satellite_url }}/api/hosts/{{ vm_name }}.local"
+        method: GET
+        user: "{{ satellite_user }}"
+        password: "{{ satellite_password }}"
+        validate_certs: false
+        force_basic_auth: yes
+      register: host_info
+      until: host_info.json.ip is defined and host_info.json.ip != ""
+      retries: 10
       delay: 30
 
-    - name: Set real VM IP
+    - name: Set VM IP
       set_fact:
-        real_vm_ip: "{{ virsh_result.stdout_lines | select('search', 'ipv4') | reject('search', '127.0.0.1') | first | regex_search('\\d+\\.\\d+\\.\\d+\\.\\d+') }}"
+        vm_ip: "{{ host_info.json.ip }}"
 
-    - name: Show real VM IP
+    - name: Show VM IP
       debug:
-        msg: "VM {{ vm_name }} got IP {{ real_vm_ip }}"
+        msg: "VM {{ vm_name }} got IP {{ vm_ip }}"
 
     - name: Wait for VM SSH to be available
       wait_for:
-        host: "{{ real_vm_ip }}"
+        host: "{{ vm_ip }}"
         port: 22
         delay: 10
         timeout: 300
@@ -171,13 +167,41 @@
     - name: Add new VM to inventory
       add_host:
         name: "{{ vm_name }}"
-        ansible_host: "{{ real_vm_ip }}"
+        ansible_host: "{{ vm_ip }}"
         ansible_user: root
         ansible_password: "12345678"
         ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
         groups: newly_provisioned
 
-- name: Play 2 - Configure new VM
+- name: Play 2 - Post-installation configuration
+  hosts: newly_provisioned
+  gather_facts: true
+  become: yes
+
+  tasks:
+    - name: Set French keyboard layout
+      command: loadkeys fr
+      changed_when: false
+
+    - name: Create user rihab
+      user:
+        name: rihab
+        password: "{{ '12345678' | password_hash('sha512') }}"
+        state: present
+        shell: /bin/bash
+        create_home: yes
+        groups: wheel
+        append: yes
+
+    - name: Ensure rihab user can use sudo without password 
+      lineinfile:
+        path: /etc/sudoers.d/rihab
+        line: 'rihab ALL=(ALL) NOPASSWD: ALL'
+        create: yes
+        mode: '0440'
+        validate: 'visudo -cf %s'
+
+- name: Play 3 - Configure new VM
   hosts: newly_provisioned
   gather_facts: true
   become: yes
