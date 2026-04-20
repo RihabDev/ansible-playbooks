@@ -207,4 +207,4 @@
   become: yes
   roles:
     - role: hardening
-    - role: node_exporter
+    # - role: node_exporter
