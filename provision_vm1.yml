@@ -177,20 +177,20 @@
       command: loadkeys fr
       changed_when: false
 
-    - name: Create user rihab
+    - name: Create user 
       user:
-        name: rihab
-        password: "{{ vm_password | password_hash('sha512') }}"
+        name: "{{ new_user }}"
+        password: "{{ new_user_password | password_hash('sha512') }}"
         state: present
         shell: /bin/bash
         create_home: yes
         groups: wheel
         append: yes
 
-    - name: Ensure rihab user can use sudo without password
+    - name: Ensure user can use sudo without password
       lineinfile:
-        path: /etc/sudoers.d/rihab
-        line: 'rihab ALL=(ALL) NOPASSWD: ALL'
+        path: "/etc/sudoers.d/{{ new_user }}"
+        line: "{{ new_user }} ALL=(ALL) NOPASSWD: ALL"
         create: yes
         mode: '0440'
         validate: 'visudo -cf %s'
