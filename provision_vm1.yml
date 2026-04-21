@@ -3,12 +3,6 @@
   hosts: localhost
   gather_facts: false
 
-  vars:
-    satellite_url: "https://satellite.local"
-    satellite_user: "admin"
-    satellite_password: "123456"
-  
-
   tasks:
     - name: Get compute resource ID
       uri:
@@ -121,7 +115,7 @@
             hostgroup_id: "{{ hg_id }}"
             compute_resource_id: "{{ cr_id }}"
             compute_profile_id: "{{ cp_id }}"
-            root_pass: "12345678"
+            root_pass: "{{ root_pass }}"
             build: true
             interfaces_attributes:
               - primary: true
@@ -169,7 +163,7 @@
         name: "{{ vm_name }}"
         ansible_host: "{{ vm_ip }}"
         ansible_user: root
-        ansible_password: "12345678"
+        ansible_password: "{{ root_pass }}"
         ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
         groups: newly_provisioned
 
@@ -186,14 +180,14 @@
     - name: Create user rihab
       user:
         name: rihab
-        password: "{{ '12345678' | password_hash('sha512') }}"
+        password: "{{ vm_password | password_hash('sha512') }}"
         state: present
         shell: /bin/bash
         create_home: yes
         groups: wheel
         append: yes
 
-    - name: Ensure rihab user can use sudo without password 
+    - name: Ensure rihab user can use sudo without password
       lineinfile:
         path: /etc/sudoers.d/rihab
         line: 'rihab ALL=(ALL) NOPASSWD: ALL'
@@ -207,4 +201,3 @@
   become: yes
   roles:
     - role: hardening
-    # - role: node_exporter
