@@ -53,11 +53,11 @@
 - name: Register VM as Prometheus scrape target
   delegate_to: "{{ prometheus_server }}"
   vars:
-    ansible_user:  "{{ new_user }}"
-    ansible_password: "{{ new_user_password }}"
+    ansible_user:  "{{ username }}"
+    ansible_password: "{{ password }}"
     ansible_become: yes
     ansible_become_method: sudo
-    ansible_become_password: "{{ new_user_password }}"
+    ansible_become_password: "{{ password }}"
     ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
   copy:
     content: |
@@ -67,8 +67,8 @@
           hostname: "{{ inventory_hostname }}"
           org: "{{ rhsm_org | default('linsoft') }}"
     dest: "/etc/prometheus/targets/{{ inventory_hostname }}.yml"
-    owner: "{{ new_user }}"
-    group: "{{ new_user }}"
+    owner: "{{ username }}"
+    group: "{{ username }}"
     mode: '0644'
 
 - name: Verify node_exporter is responding
