@@ -1,0 +1,26 @@
+---
+- name: Remediate VM
+  hosts: "{{ target_host }}"
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Check and restart failed services
+      shell: systemctl list-units --state=failed --no-legend | awk '{print $1}'
+      register: failed_services
+      changed_when: false
+
+    - name: Restart failed services
+      systemd:
+        name: "{{ item }}"
+        state: restarted
+      loop: "{{ failed_services.stdout_lines }}"
+      when: failed_services.stdout_lines | length > 0
+
+    - name: Clear memory cache if high memory
+      shell: sync && echo 3 > /proc/sys/vm/drop_caches
+      when: failed_services.stdout_lines | length == 0
+
+    - name: Log remediation action
+      debug:
+        msg: "Remediation completed on {{ inventory_hostname }}"
