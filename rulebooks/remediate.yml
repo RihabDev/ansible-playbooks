@@ -1,0 +1,38 @@
+---
+- name: Listen for Prometheus alerts and remediate
+  hosts: all
+  sources:
+    - ansible.eda.webhook:
+        host: 0.0.0.0
+        port: 5000
+
+  rules:
+    - name: Node is down
+      condition: event.payload.alerts[0].labels.alertname == "NodeDown"
+      action:
+        run_job_template:
+          name: "Remediate - Restart Services"
+          organization: "Default"
+          job_args:
+            extra_vars:
+              target_host: "{{ event.payload.alerts[0].labels.hostname }}"
+
+    - name: High CPU detected
+      condition: event.payload.alerts[0].labels.alertname == "HighCPU"
+      action:
+        run_job_template:
+          name: "Remediate - Restart Services"
+          organization: "Default"
+          job_args:
+            extra_vars:
+              target_host: "{{ event.payload.alerts[0].labels.hostname }}"
+
+    - name: High Memory detected
+      condition: event.payload.alerts[0].labels.alertname == "HighMemory"
+      action:
+        run_job_template:
+          name: "Remediate - Restart Services"
+          organization: "Default"
+          job_args:
+            extra_vars:
+              target_host: "{{ event.payload.alerts[0].labels.hostname }}"
