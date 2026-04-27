@@ -5,7 +5,13 @@
   gather_facts: yes
 
   tasks:
-    - name: Check and restart failed services
+    - name: Restart node_exporter service
+      systemd:
+        name: node_exporter
+        state: started
+        enabled: yes
+
+    - name: Check and restart other failed services
       shell: systemctl list-units --state=failed --no-legend | awk '{print $1}'
       register: failed_services
       changed_when: false
@@ -16,10 +22,6 @@
         state: restarted
       loop: "{{ failed_services.stdout_lines }}"
       when: failed_services.stdout_lines | length > 0
-
-    - name: Clear memory cache if high memory
-      shell: sync && echo 3 > /proc/sys/vm/drop_caches
-      when: failed_services.stdout_lines | length == 0
 
     - name: Log remediation action
       debug:
