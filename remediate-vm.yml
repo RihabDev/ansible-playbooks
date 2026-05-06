@@ -1,38 +1,24 @@
 ---
-- name: Listen for Prometheus alerts and remediate
-  hosts: all
-  sources:
-    - ansible.eda.webhook:
-        host: 0.0.0.0
-        port: 5000
-
-  rules:
-    - name: Node is down
-      condition: event.payload.alerts[0].labels.alertname == "NodeDown"
-      action:
-        run_job_template:
-          name: "Remediate - Restart Services"
-          organization: "Default"
-          job_args:
-            extra_vars:
-              target_host: "{{ event.payload.alerts[0].labels.hostname }}.local"
-
-    - name: High CPU detected
-      condition: event.payload.alerts[0].labels.alertname == "HighCPU"
-      action:
-        run_job_template:
-          name: "Remediate - Restart Services"
-          organization: "Default"
-          job_args:
-            extra_vars:
-              target_host: "{{ event.payload.alerts[0].labels.hostname }}.local"
-
-    - name: High Memory detected
-      condition: event.payload.alerts[0].labels.alertname == "HighMemory"
-      action:
-        run_job_template:
-          name: "Remediate - Restart Services"
-          organization: "Default"
-          job_args:
-            extra_vars:
-              target_host: "{{ event.payload.alerts[0].labels.hostname }}.local"
+- name: Remediate VM
+  hosts: "{{ target_host }}"
+  become: yes
+  gather_facts: yes
+  tasks:
+    - name: Restart node_exporter service
+      systemd:
+        name: node_exporter
+        state: started
+        enabled: yes
+    - name: Check and restart other failed services
+      shell: systemctl list-units --state=failed --no-legend | awk '{print $1}'
+      register: failed_services
+      changed_when: false
+    - name: Restart failed services
+      systemd:
+        name: "{{ item }}"
+        state: restarted
+      loop: "{{ failed_services.stdout_lines }}"
+      when: failed_services.stdout_lines | length > 0
+    - name: Log remediation action
+      debug:
+        msg: "Remediation completed on {{ inventory_hostname }}"
