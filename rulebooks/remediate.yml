@@ -15,7 +15,7 @@
           organization: "Default"
           job_args:
             extra_vars:
-              target_host: "{{ event.payload.alerts[0].labels.hostname }}.local"
+              target_host: "{{ event.payload.alerts[0].labels.hostname }}"
 
     - name: High CPU detected
       condition: event.payload.alerts[0].labels.alertname == "HighCPU"
@@ -25,7 +25,7 @@
           organization: "Default"
           job_args:
             extra_vars:
-              target_host: "{{ event.payload.alerts[0].labels.hostname }}.local"
+              target_host: "{{ event.payload.alerts[0].labels.hostname }}"
 
     - name: High Memory detected
       condition: event.payload.alerts[0].labels.alertname == "HighMemory"
