@@ -1,10 +1,9 @@
-ssh_permit_root_login: "no"
-ssh_password_auth: "no"
-ssh_port: 22
+ssh_permit_root_login: "yes"
+ssh_password_auth: "yes"
 hardening_packages_remove:
   - telnet
   - rsh
-  - ypbind
+
 hardening_packages_install:
   - aide
   - audispd-plugins
