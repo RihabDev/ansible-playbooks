@@ -1,0 +1,50 @@
+---
+- name: Post-installation configuration
+  hosts: "{{ vm_name }}"   # resolved from dynamic inventory / extra vars
+  gather_facts: true
+  become: yes
+
+  vars:
+    # Fallback values — override via AAP survey or extra vars
+    ansible_host: "{{ vm_ip }}"
+    ansible_user: root
+    ansible_password: "{{ root_pass }}"
+    ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
+
+  tasks:
+    - name: Set French keyboard layout (current session)
+      command: loadkeys fr
+      changed_when: false
+
+    - name: Persist French keyboard layout across reboots
+      lineinfile:
+        path: /etc/vconsole.conf
+        regexp: '^KEYMAP='
+        line: 'KEYMAP=fr'
+        create: yes
+    - name: Create admin user
+      user:
+        name: "{{ new_user }}"
+        password: "{{ new_user_password | password_hash('sha512') }}"
+        state: present
+        shell: /bin/bash
+        create_home: yes
+        groups: wheel
+        append: yes
+
+    - name: Allow admin user to run sudo without password
+      lineinfile:
+        path: "/etc/sudoers.d/{{ new_user }}"
+        line: "{{ new_user }} ALL=(ALL) NOPASSWD: ALL"
+        create: yes
+        mode: '0440'
+        validate: 'visudo -cf %s'
+
+    - name: Confirm user was created
+      command: "id {{ new_user }}"
+      register: user_check
+      changed_when: false
+
+    - name: Show user info
+      debug:
+        msg: "{{ user_check.stdout }}"
