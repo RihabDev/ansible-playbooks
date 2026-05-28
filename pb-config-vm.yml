@@ -1,6 +1,6 @@
 ---
 - name: Configure VM — hardening and monitoring
-  hosts: "{{ vm_name }}"
+  hosts: newly_provisioned
   gather_facts: true
   become: yes
 
