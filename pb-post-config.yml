@@ -1,6 +1,6 @@
 ---
 - name: Post-installation configuration
-  hosts: newly_provisioned
+  hosts: "{{ vm_name }}"
   gather_facts: true
   become: yes
 
