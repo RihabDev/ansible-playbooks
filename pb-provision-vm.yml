@@ -164,15 +164,6 @@
         timeout: 300
         state: started
 
-    - name: Add new VM to in-memory inventory
-      add_host:
-        name: "{{ vm_name }}"
-        ansible_host: "{{ vm_ip }}"
-        ansible_user: root
-        ansible_password: "{{ root_pass }}"
-        ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
-        groups: newly_provisioned
-
     - name: Publish VM details as workflow artifacts
       set_stats:
         data:
