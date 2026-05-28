@@ -95,11 +95,6 @@
     - set_fact:
         domain_id: "{{ domain_result.json.results[0].id }}"
 
-    # ── Create the host record and trigger build ───────────────
-    # NOTE: The VM will start automatically because Satellite sets
-    # start_after_build: true via the compute resource settings,
-    # removing the need for a manual power-on step.
-
     - name: Create and provision VM via Satellite API
       uri:
         url: "{{ satellite_url }}/api/hosts"
@@ -122,8 +117,6 @@
             compute_profile_id: "{{ cp_id }}"
             root_pass: "{{ root_pass }}"
             build: true
-            # start_after_build ensures the VM boots automatically —
-            # no manual power-on needed (mentor recommendation #2)
             compute_attributes:
               start: "1"
             interfaces_attributes:
@@ -137,12 +130,14 @@
       pause:
         minutes: 15
         prompt: "Waiting for kickstart / PXE build to complete..."
+
     - name: Save host ID from provision result
       set_fact:
         host_id: "{{ provision_result.json.id }}"
+
     - name: Poll Satellite until VM IP is assigned
       uri:
-        url: "{{ satellite_url }}//api/hosts/{{ host_id }}"
+        url: "{{ satellite_url }}/api/hosts/{{ host_id }}"
         method: GET
         user: "{{ satellite_user }}"
         password: "{{ satellite_password }}"
@@ -153,7 +148,7 @@
       retries: 10
       delay: 30
 
-    - name: Persist VM IP as a fact for downstream plays
+    - name: Persist VM IP as a fact
       set_fact:
         vm_ip: "{{ host_info.json.ip }}"
 
@@ -168,6 +163,15 @@
         delay: 10
         timeout: 300
         state: started
+
+    - name: Add new VM to in-memory inventory
+      add_host:
+        name: "{{ vm_name }}"
+        ansible_host: "{{ vm_ip }}"
+        ansible_user: root
+        ansible_password: "{{ root_pass }}"
+        ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
+        groups: newly_provisioned
 
     - name: Publish VM details as workflow artifacts
       set_stats:
