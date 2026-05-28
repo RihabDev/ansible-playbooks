@@ -1,6 +1,6 @@
 ---
 - name: Post-installation configuration
-  hosts: "{{ vm_name }}"   # resolved from dynamic inventory / extra vars
+  hosts: newly_provisioned
   gather_facts: true
   become: yes
 
