@@ -137,10 +137,12 @@
       pause:
         minutes: 15
         prompt: "Waiting for kickstart / PXE build to complete..."
-
+    - name: Save host ID from provision result
+      set_fact:
+        host_id: "{{ provision_result.json.id }}"
     - name: Poll Satellite until VM IP is assigned
       uri:
-        url: "{{ satellite_url }}/api/hosts/{{ vm_name }}.local"
+        url: "{{ satellite_url }}//api/hosts/{{ host_id }}"
         method: GET
         user: "{{ satellite_user }}"
         password: "{{ satellite_password }}"
