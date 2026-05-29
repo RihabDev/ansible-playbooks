@@ -3,7 +3,10 @@
   hosts: "{{ vm_name | lower }}.local"
   gather_facts: true
   become: yes
-
+  vars:
+    ansible_user: root
+    ansible_password: "{{ root_pass }}"
+    ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
   roles:
     - role: hardening
     - role: node_exporter
