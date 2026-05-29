@@ -13,6 +13,7 @@
         validate_certs: false
         force_basic_auth: yes
       register: host_lookup
+      ignore_errors: yes
 
     - name: Remove VM from Satellite
       uri:
@@ -23,7 +24,8 @@
         validate_certs: false
         force_basic_auth: yes
         status_code: 200
-        
+        ignore_errors: yes
+        when: host_lookup.json.results | length > 0
     - name: Destroy VM on KVM (power off)
       delegate_to: "{{ kvm_host }}"
       command: "virsh destroy {{ vm_name | lower }}.local"
