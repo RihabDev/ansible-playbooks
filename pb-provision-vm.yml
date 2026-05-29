@@ -156,14 +156,6 @@
       debug:
         msg: "VM '{{ vm_name }}' is up at {{ vm_ip }}"
 
-    - name: Wait for SSH to become available
-      wait_for:
-        host: "{{ vm_ip }}"
-        port: 22
-        delay: 10
-        timeout: 300
-        state: started
-
     - name: Publish VM details as workflow artifacts
       set_stats:
         data:
