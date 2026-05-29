@@ -73,8 +73,7 @@
 
 - name: Verify node_exporter is responding
   uri:
-    url: "http://{{ ansible_host }}:{{ node_exporter_port }}/metrics"
+    url: "http://localhost:{{ node_exporter_port }}/metrics"
     status_code: 200
-  delegate_to: localhost
   retries: 3
   delay: 5
