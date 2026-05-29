@@ -4,9 +4,19 @@
   gather_facts: false
 
   tasks:
+    - name: Get host ID from Satellite
+      uri:
+        url: "{{ satellite_url }}/api/hosts?search=name%3D{{ vm_name | lower }}.local"
+        method: GET
+        user: "{{ satellite_user }}"
+        password: "{{ satellite_password }}"
+        validate_certs: false
+        force_basic_auth: yes
+      register: host_lookup
+
     - name: Remove VM from Satellite
       uri:
-        url: "{{ satellite_url }}/api/hosts/{{ vm_name | lower }}.local"
+        url: "{{ satellite_url }}/api/hosts/{{ host_lookup.json.results[0].id }}"
         method: DELETE
         user: "{{ satellite_user }}"
         password: "{{ satellite_password }}"
