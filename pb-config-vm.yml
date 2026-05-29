@@ -4,12 +4,6 @@
   gather_facts: true
   become: yes
 
-  vars:
-    ansible_host: "{{ vm_ip }}"
-    ansible_user: "{{ new_user }}"         
-    ansible_password: "{{ new_user_password }}"
-    ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
-
   roles:
     - role: hardening
     - role: node_exporter
