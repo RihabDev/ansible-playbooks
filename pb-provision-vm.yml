@@ -1,6 +1,6 @@
 ---
 - name: Provision VM via Satellite API
-  hosts: localhost
+  hosts: "{{ vm_name | lower }}.local"
   gather_facts: false
 
   tasks:
