@@ -1,17 +1,20 @@
 ---
 - name: Post-installation configuration
   hosts: "{{ vm_name | lower }}.local"
-  gather_facts: true
+  gather_facts: false
   become: yes
 
   vars:
-    # Fallback values — override via AAP survey or extra vars
     ansible_host: "{{ vm_ip }}"
     ansible_user: root
     ansible_password: "{{ root_pass }}"
     ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
 
   tasks:
+    - name: Wait for VM to finish booting
+      wait_for_connection:
+        delay: 30
+        timeout: 300
     - name: Set French keyboard layout (current session)
       command: loadkeys fr
       changed_when: false
