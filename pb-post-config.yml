@@ -1,6 +1,6 @@
 ---
 - name: Post-installation configuration
-  hosts: "{{ vm_name }}"
+  hosts: "{{ vm_name | lower }}.local"
   gather_facts: true
   become: yes
 
