@@ -1,0 +1,67 @@
+---
+- name: Decommission VM
+  hosts: localhost
+  gather_facts: false
+
+  tasks:
+    - name: Remove VM from Satellite
+      uri:
+        url: "{{ satellite_url }}/api/hosts/{{ vm_name | lower }}.local"
+        method: DELETE
+        user: "{{ satellite_user }}"
+        password: "{{ satellite_password }}"
+        validate_certs: false
+        force_basic_auth: yes
+        status_code: 200
+        
+    - name: Destroy VM on KVM (power off)
+      delegate_to: "{{ kvm_host }}"
+      vars:
+        ansible_user: "{{ kvm_user }}"
+        ansible_password: "{{ kvm_password }}"
+        ansible_become: yes
+        ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
+      command: "virsh destroy {{ vm_name | lower }}.local"
+      ignore_errors: yes
+
+    - name: Undefine VM on KVM (remove from KVM)
+      delegate_to: "{{ kvm_host }}"
+      vars:
+        ansible_user: "{{ kvm_user }}"
+        ansible_password: "{{ kvm_password }}"
+        ansible_become: yes
+        ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
+      command: "virsh undefine {{ vm_name | lower }}.local"
+      ignore_errors: yes
+
+    - name: Delete VM disk volume on KVM
+      delegate_to: "{{ kvm_host }}"
+      vars:
+        ansible_user: "{{ kvm_user }}"
+        ansible_password: "{{ kvm_password }}"
+        ansible_become: yes
+        ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
+      command: "virsh vol-delete {{ vm_name | lower }}.local-disk1 --pool default"
+      ignore_errors: yes
+
+    - name: Remove Prometheus scrape target file
+      delegate_to: "{{ prometheus_server }}"
+      vars:
+        ansible_user: "{{ prom_username }}"
+        ansible_password: "{{ prom_password }}"
+        ansible_become: yes
+        ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
+      file:
+        path: "/etc/prometheus/targets/{{ vm_name | lower }}.local.yml"
+        state: absent
+
+    - name: Reload Prometheus to apply changes
+      delegate_to: "{{ prometheus_server }}"
+      vars:
+        ansible_user: "{{ prom_username }}"
+        ansible_password: "{{ prom_password }}"
+        ansible_become: yes
+        ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
+      systemd:
+        name: prometheus
+        state: reloaded
