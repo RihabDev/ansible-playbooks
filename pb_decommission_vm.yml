@@ -24,8 +24,8 @@
         force_basic_auth: yes
         status_code: 200
       when: host_lookup.json.results | length > 0
-      
-- name: Destroy VM on KVM (power off)
+
+    - name: Destroy VM on KVM (power off)
       delegate_to: "{{ kvm_host }}"
       become: yes
       command: "virsh destroy {{ vm_name | lower }}.local"
@@ -42,7 +42,7 @@
       become: yes
       command: "virsh vol-delete {{ vm_name | lower }}.local-disk1 --pool default"
       ignore_errors: yes
-      
+
     - name: Remove Prometheus scrape target file
       delegate_to: "{{ prometheus_server }}"
       become: yes
@@ -55,7 +55,7 @@
         path: "/etc/prometheus/targets/{{ vm_name | lower }}.local.yml"
         state: absent
 
-    - name: Reload Prometheus to apply changes
+    - name: Restart Prometheus to apply changes
       delegate_to: "{{ prometheus_server }}"
       become: yes
       vars:
