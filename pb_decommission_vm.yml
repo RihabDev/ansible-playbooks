@@ -28,18 +28,24 @@
     - name: Destroy VM on KVM (power off)
       delegate_to: "{{ kvm_host }}"
       become: yes
+      vars:
+        ansible_become_password: "{{ ansible_password }}"
       command: "virsh destroy {{ vm_name | lower }}.local"
       ignore_errors: yes
 
     - name: Undefine VM on KVM
       delegate_to: "{{ kvm_host }}"
       become: yes
+      vars:
+        ansible_become_password: "{{ ansible_password }}"
       command: "virsh undefine {{ vm_name | lower }}.local"
       ignore_errors: yes
 
     - name: Delete VM disk volume on KVM
       delegate_to: "{{ kvm_host }}"
       become: yes
+      vars:
+        ansible_become_password: "{{ ansible_password }}"
       command: "virsh vol-delete {{ vm_name | lower }}.local-disk1 --pool default"
       ignore_errors: yes
 
