@@ -128,7 +128,7 @@
 
     - name: Wait for kickstart to complete
       pause:
-        minutes: 15
+        minutes: 20
         prompt: "Waiting for kickstart / PXE build to complete..."
 
     - name: Save host ID from provision result
