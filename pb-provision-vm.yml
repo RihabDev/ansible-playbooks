@@ -114,7 +114,7 @@
             location_id: "{{ loc_id }}"
             hostgroup_id: "{{ hg_id }}"
             compute_resource_id: "{{ cr_id }}"
-            compute_profile_id: "{{ cp_id }}"
+            compute_profile: "{{ compute_profile }}"
             root_pass: "{{ root_pass }}"
             build: true
             compute_attributes:
