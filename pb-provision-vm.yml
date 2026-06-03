@@ -4,6 +4,7 @@
   gather_facts: false
 
   tasks:
+
     - name: Get compute resource ID
       uri:
         url: "{{ satellite_url }}/api/compute_resources?search=name%3DKVM-local"
@@ -56,9 +57,10 @@
     - set_fact:
         org_id: "{{ org_result.json.results[0].id }}"
 
-    - name: Get compute profile ID
+    # FIXED: Now uses the survey variable {{ compute_profile }} instead of hardcoded "satellite-vm"
+    - name: Get compute profile ID from survey selection
       uri:
-        url: "{{ satellite_url }}/api/compute_profiles?search=name%3Dsatellite-vm"
+        url: "{{ satellite_url }}/api/compute_profiles?search=name%3D{{ compute_profile | urlencode }}"
         method: GET
         user: "{{ satellite_user }}"
         password: "{{ satellite_password }}"
@@ -95,6 +97,7 @@
     - set_fact:
         domain_id: "{{ domain_result.json.results[0].id }}"
 
+    # FIXED: Now uses compute_profile_id (numeric ID) instead of compute_profile (string name)
     - name: Create and provision VM via Satellite API
       uri:
         url: "{{ satellite_url }}/api/hosts"
@@ -114,7 +117,7 @@
             location_id: "{{ loc_id }}"
             hostgroup_id: "{{ hg_id }}"
             compute_resource_id: "{{ cr_id }}"
-            compute_profile: "{{ compute_profile }}"
+            compute_profile_id: "{{ cp_id }}"   # FIXED: pass numeric ID not string name
             root_pass: "{{ root_pass }}"
             build: true
             compute_attributes:
@@ -154,10 +157,11 @@
 
     - name: Show assigned IP
       debug:
-        msg: "VM '{{ vm_name }}' is up at {{ vm_ip }}"
+        msg: "VM '{{ vm_name }}' provisioned with profile '{{ compute_profile }}' is up at {{ vm_ip }}"
 
     - name: Publish VM details as workflow artifacts
       set_stats:
         data:
           vm_name: "{{ vm_name }}"
           vm_ip: "{{ vm_ip }}"
+          compute_profile: "{{ compute_profile }}"
