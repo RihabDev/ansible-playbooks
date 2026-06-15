@@ -1,35 +1,18 @@
 ---
-- name: Listen for Prometheus alerts and remediate
+- name: Remediate VM
   hosts: all
-  sources:
-    - ansible.eda.webhook:
-        host: 0.0.0.0
-        port: 5000
+  become: true
+  tasks:
+    - name: Restart all failed services
+      shell: |
+        systemctl list-units --state=failed --no-legend | awk '{print $1}' | xargs -r systemctl restart
+      ignore_errors: true
 
-rules:
-  - name: Node is down
-    condition: event.payload.alerts[0].labels.alertname == "NodeDown"
-    action:
-      run_job_template:
-        name: "Remediate - Restart Services"
-        organization: "Default"
-        job_args:
-          limit: "{{ event.payload.alerts[0].labels.hostname }}" 
-
-  - name: High CPU detected
-    condition: event.payload.alerts[0].labels.alertname == "HighCPU"
-    action:
-      run_job_template:
-        name: "Remediate - Restart Services"
-        organization: "Default"
-        job_args:
-          limit: "{{ event.payload.alerts[0].labels.hostname }}"
-
-  - name: High Memory detected
-    condition: event.payload.alerts[0].labels.alertname == "HighMemory"
-    action:
-      run_job_template:
-        name: "Remediate - Restart Services"
-        organization: "Default"
-        job_args:
-          limit: "{{ event.payload.alerts[0].labels.hostname }}"
+    - name: Ensure critical services are running
+      service:
+        name: "{{ item }}"
+        state: started
+      loop:
+        - sshd
+        - chronyd
+      ignore_errors: true
