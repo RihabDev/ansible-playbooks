@@ -14,7 +14,7 @@ rules:
         name: "Remediate - Restart Services"
         organization: "Default"
         job_args:
-          limit: "{{ event.payload.alerts[0].labels.hostname }}.local" 
+          limit: "{{ event.payload.alerts[0].labels.hostname }}" 
 
   - name: High CPU detected
     condition: event.payload.alerts[0].labels.alertname == "HighCPU"
@@ -23,7 +23,7 @@ rules:
         name: "Remediate - Restart Services"
         organization: "Default"
         job_args:
-          limit: "{{ event.payload.alerts[0].labels.hostname }}.local"
+          limit: "{{ event.payload.alerts[0].labels.hostname }}"
 
   - name: High Memory detected
     condition: event.payload.alerts[0].labels.alertname == "HighMemory"
@@ -32,4 +32,4 @@ rules:
         name: "Remediate - Restart Services"
         organization: "Default"
         job_args:
-          limit: "{{ event.payload.alerts[0].labels.hostname }}.local"
+          limit: "{{ event.payload.alerts[0].labels.hostname }}"
