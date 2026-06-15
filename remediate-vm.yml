@@ -1,6 +1,6 @@
 ---
 - name: Remediate VM
-  hosts: all
+  hosts: "{{ ansible_limit | default(omit) }}"
   become: true
   tasks:
     - name: Restart all failed services
