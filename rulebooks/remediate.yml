@@ -14,7 +14,7 @@ rules:
         name: "Remediate - Restart Services"
         organization: "Default"
         job_args:
-          limit: "{{ event.payload.alerts[0].labels.hostname }}"
+          limit: "{{ event.payload.alerts[0].labels.hostname }}.local" 
 
   - name: High CPU detected
     condition: event.payload.alerts[0].labels.alertname == "HighCPU"
