@@ -96,7 +96,6 @@
     - set_fact:
         domain_id: "{{ domain_result.json.results[0].id }}"
 
-    # FIXED: Now uses compute_profile_id (numeric ID) instead of compute_profile (string name)
     - name: Create and provision VM via Satellite API
       uri:
         url: "{{ satellite_url }}/api/hosts"
@@ -116,7 +115,7 @@
             location_id: "{{ loc_id }}"
             hostgroup_id: "{{ hg_id }}"
             compute_resource_id: "{{ cr_id }}"
-            compute_profile_id: "{{ cp_id }}"   # FIXED: pass numeric ID not string name
+            compute_profile_id: "{{ cp_id }}"  
             root_pass: "{{ root_pass }}"
             build: true
             compute_attributes:
